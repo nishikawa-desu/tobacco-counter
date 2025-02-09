@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タバコカウンター</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            padding: 20px;
+            margin: 0;
+        }
+        .counter-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .count {
+            font-size: 48px;
+            margin: 20px 0;
+        }
+        .stats, .calendar {
+            font-size: 16px;
+            margin: 10px 0;
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .decrease {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        .increase {
+            background-color: #4caf50;
+            color: white;
+        }
+        .reset {
+            background-color: #007bff;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .chart-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        
+        /* スマホ対応 */
+        @media (max-width: 600px) {
+            .counter-container {
+                padding: 15px;
+                width: 90%;
+            }
+            .count {
+                font-size: 36px;
+            }
+            .stats {
+                font-size: 14px;
+            }
+            .calendar {
+                font-size: 14px;
+            }
+            .chart-container {
+                max-width: 100%;
+            }
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="counter-container">
+        <h1>タバコカウンター</h1>
+        <div class="count" id="count">20</div>
+        <button class="decrease" onclick="decreaseCount()">-1 本</button>
+        <button class="increase" onclick="increaseCount()">+1 箱</button>
+        <button class="reset" onclick="resetCount()">リセット</button>
+        <div class="stats" id="stats">平均消費本数: 0 本/日</div>
+        <div class="calendar" id="calendar"></div>
+    </div>
+
+    <!-- 消費ペースグラフ -->
+    <div class="chart-container">
+        <canvas id="consumptionChart"></canvas>
+    </div>
+
+    <script>
+        let count = 20; // 初期本数
+        let totalConsumed = 0; // 総消費本数
+        let startDate = new Date(); // 計測開始日
+        let consumptionLog = {}; // 日別消費記録
+        let monthlyConsumption = {}; // 月別消費記録
+
+        function updateDisplay() {
+            document.getElementById('count').textContent = count;
+            updateStats();
+            updateCalendar();
+            updateChart();
+        }
+
+        function decreaseCount() {
+            if (count > 0) {
+                count--;
+                totalConsumed++;
+                const today = new Date().toISOString().split('T')[0];
+                consumptionLog[today] = (consumptionLog[today] || 0) + 1;
+                updateMonthlyConsumption(today);
+                updateDisplay();
+            }
+        }
+
+        function increaseCount() {
+            count += 20; // 1箱=20本として追加
+            updateDisplay();
+        }
+
+        function resetCount() {
+            count = 20; // 初期状態にリセット
+            totalConsumed = 0; // 消費本数もリセット
+            startDate = new Date(); // 計測開始日をリセット
+            consumptionLog = {}; // 消費記録もリセット
+            monthlyConsumption = {}; // 月別記録もリセット
+            updateDisplay();
+        }
+
+        function updateStats() {
+            const now = new Date();
+            const daysElapsed = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
+            const avgConsumption = (totalConsumed / daysElapsed).toFixed(2);
+            document.getElementById('stats').textContent = `平均消費本数: ${avgConsumption} 本/日`;
+        }
+
+        function updateCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '<h2>日別消費記録</h2><table><tr><th>日付</th><th>本数</th></tr>';
+
+            for (const date in consumptionLog) {
+                calendar.innerHTML += `<tr><td>${date}</td><td>${consumptionLog[date]} 本</td></tr>`;
+            }
+
+            calendar.innerHTML += '</table>';
+        }
+
+        function updateMonthlyConsumption(date) {
+            const month = date.slice(0, 7); // YYYY-MM形式
+            monthlyConsumption[month] = (monthlyConsumption[month] || 0) + 1;
+        }
+
+        function updateChart() {
+            const months = Object.keys(monthlyConsumption);
+            const consumptionData = months.map(month => monthlyConsumption[month]);
+
+            const ctx = document.getElementById('consumptionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: '月別消費本数',
+                        data: consumptionData,
+                        backgroundColor: '#4caf50',
+                        borderColor: '#388e3c',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
